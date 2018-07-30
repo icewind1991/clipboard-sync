@@ -1,0 +1,32 @@
+image: Visual Studio 2017
+
+install:
+  - ps: Start-FileDownload "https://static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe"
+  - rustup-init.exe -y --default-host i686-pc-windows-gnu
+  - SET PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - SET PATH=%PATH%;C:\MinGW\bin
+  - rustc -V
+  - cargo -V
+
+init:
+- set TAG_NAME=%APPVEYOR_REPO_TAG_NAME%
+
+build_script:
+  - cargo build --verbose --release
+
+artifacts:
+  - path: target\release\client.exe
+    name: portable
+
+deploy:
+  release: clipbaord-sync-v$(appveyor_build_version)
+  description: 'Clipboard sync client'
+  provider: GitHub
+  auth_token:
+    secure: UidE7tNm//3VogAs7lqznMBa9HBmzmIj9mbo1mJWwFF20tKC+IG+doBdy52NP8JA
+  artifact: target\release\client.exe
+  draft: false
+  prerelease: false
+  on:
+    branch: master                 # release from master branch only
+    appveyor_repo_tag: true        # deploy on tag push only

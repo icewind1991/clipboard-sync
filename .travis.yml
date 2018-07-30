@@ -1,0 +1,33 @@
+language: rust
+dist: trusty
+sudo: required
+services:
+- docker
+install:
+- docker pull ekidd/rust-musl-builder:latest
+script:
+- cargo build
+- "./build_static.sh server"
+after_success:
+- docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+- export REPO=clipboardsync/server
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
+  ; fi`
+- docker build -f Dockerfile -t $REPO:$COMMIT .
+- docker tag $REPO:$COMMIT $REPO:$TAG
+- docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+- docker push $REPO
+env:
+  global:
+  - COMMIT=${TRAVIS_COMMIT::8}
+  - secure: i7Fsoecvroc5UB3nK7WgtAFEPXxOEDg3qw7wDF0ZumoN7zwiUNg1eMWNpaFe4mhKprxUFBHp8sCQRB6Av5yLY1m/F3l0jcz8NINvZoIIp3krT6fSErVBxFrzepyd87EKdAEr2kkfUyYS8p9GSvgJBpSt9Jg9oE8eGNmImX8jAKbkqIj/JLrpDeKJ6aaU7+psZw6bdrKMu6FTCDmKUkXAwgzXMdDQASbFgF+DzUJh5lWnctLfnfY9wsoi2KI8qS3Pd4h6ifDtb9jScxxgSdu/hHhtvCJ7ig/CxsuS7e/gC/c9BScxJTks1kQF7KYkYx9zt4AebxVhF/Fy8S+UhWrt+9hSSxi89QQuzqYXqM08S24vmI3V+mMHdFZ4/ONK9iZVNMP6s/UXXo0ENjvAyej8GmkekzWwBfp1IKuSJkPa1Hs2zCwCWn2xvQpCCIsGY3MTFOiNGR1kBlJO/YLh6EZF9qyfDYAPV3LNBdSSFLwFEL0dol4cESYHiu+NvHyTORtlk6BtJUHfMLIa0/NxMhMcHBXuYbqQ9ynU25A48zzy4eSfzLzQFPFZPhikyYzKXTayg2/xTonBD7cZY7Tf8a2ISfioewX+BsYsgi30eL7dBA0b49aGktDoFD/jRPxz8hg9yngl7kJqf8YllDJq3ujzIDwIXbw5JdwXNw4xXnMjtEI=
+  - secure: AZvo2L/sQjHSVlv8baiaNsiEl7GxCnH57qMI+AZ3+CQH9QMn2cQUL3CveWejIzQ599EBoN7voiLfLd99YqpluZUSvOfzuDnxqY6hV44h+ewnpyyQ5tik7ZvxoAmmKTZeKD09p6i5ORJ/jF/oERGaPgPLm3WeK/wkrqI9bE/bIqbpQqLq6RhomakAE11pdKe3xh5NxMY8EB+YYyEyVF4D137Cm+ssZGaJWy972c9kq1HUnTmoLlLsb6PEzptu57dOEZsgulRba1gPMX4mFA3APQwuHfh/iLfOYb42/LwXAiPcAJqipOvweyaLt7KCqUB2l21mIF73CxYTlbFIYO/rBsgquXeA2nWDrnlcri9ld7DgVzm0FKjztQY9K4aPhifZO2aPci0BnhH0SNOJZZEFylFck5R8jA9kQIGROvUjbHzHo1+T9HOgVt2++Zv0yigQCkCsjWzjWfP45xDfhyJZKNKFh6UugQegtw0NTc6fRcALH+WJmFgzJXX1cc5acZ5ttC+eiFoEihzq2/2Gd/DdjRi8WcgskBydIOuySdVhcVXqaswKI+LsHHzq/hMGATuWDLNcnKy3O/jS4gEHQZoQ9AgCC7Pq/K59UgPBJLLzIrIF1SUQ9iugUN7322mGwtZzf7Ib3k/dJWrOIzKc6Vl8SUHQ3Wn6UOZl8AETRL9cvjs=
+deploy:
+  provider: releases
+  api_key:
+    secure: xaXR7rKvcqA5SN7vptrcK6JfL5YYH4twbGRHcpdiXhvbz1ObQFbq05vTd66yXFDCsUUYz6kbh9HJyBx5zKlBawNy2sJAvMm2ke4XbiXIMqrgbdeWKLUnBEy2m/sb6/AbN2GXKAl9xp/0zDbkrOuwheft/hFfprDLXN+00Er6KT1zGU2Q72zj6bz1LBSIL4puip2n/7mbhAsmH+aNbJcKqSFKNtye0knD9U5h3fLNDtWzC/EMDE/5Ly68+pKcSKJSpsSH6I6NkZTyBIUFw2CNlN1fh/2qDvZTBpCkLMnIdX9GdvFnqv+y1drxIz/LrKGfBjSkc6jyZYmJyfNRio8moLcbjmA8r4XOsdOBKFZjzSQNf5YnAvuAaqcM0rCec+9PNPucPHYHsZvIMw+qt/HE8nw43JUcNk7GyFQD/FNhT4Sm0cBYhENsXw4Dx3aRIjhMLMLsLDSxpg27KGDPr/YmGwNMcmY/R6bqVsjmnydEmq5JfKyGCfoTKW+rh9hwVyyudOFCXiVIszFuaptVYYPmB5wAs8JXXjVGERpQhJfTStbPlWtvunUbNJp+P5qIKGXpzXOJm3wNdM4taBHIVotoBzEaMyGo1SARmhNxczMo66MdLKDKVif9JZ+xjF5tz5D1qe2Qzwx7ZJH+vW6E1GpkURIYSLLtixKtdiNifyAozPA=
+  file: target/x86_64-unknown-linux-musl/release/server
+  on:
+    repo: icewind1991/clipboard-sync
+    tags: true
