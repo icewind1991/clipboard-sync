@@ -12,9 +12,12 @@ name = "client"
 path = "src/client.rs"
 
 [dependencies]
-ws = "0.7.3"
 mio = "0.6.10"
 serde = "1.0.15"
 serde_json = "1.0.3"
 serde_derive = "1.0.15"
 clipboard = "0.4.6"
+
+[dependencies.ws]
+git = "https://github.com/housleyjk/ws-rs"
+features = ["nativetls"]
