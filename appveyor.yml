@@ -19,7 +19,6 @@ artifacts:
     name: portable
 
 deploy:
-  release: clipbaord-sync-v$(appveyor_build_version)
   description: 'Clipboard sync client'
   provider: GitHub
   auth_token:
