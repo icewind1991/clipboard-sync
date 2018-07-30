@@ -1,29 +1,22 @@
-#[macro_use]
-extern crate serde_derive;
-
-extern crate ws;
 extern crate mio;
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
+extern crate ws;
 
+use common::ClipboardCommand;
 use mio::Token;
-use std::collections::HashMap;
-use ws::{listen, Handler, Sender, Result, Message, CloseCode, Error};
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+use ws::{CloseCode, Error, Handler, listen, Message, Result, Sender};
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-enum ClipboardCommand {
-    #[serde(rename = "listen")]
-    Listen { session: String },
-    #[serde(rename = "set")]
-    Set { session: String, value: String }
-}
+mod common;
 
 struct Session {
     clients: HashMap<Token, Sender>,
-    value: String
+    value: String,
 }
 
 fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Session>, client: Sender) {
@@ -32,21 +25,12 @@ fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Sess
             if !sessions.contains_key(&session_name) {
                 let mut new_session = Session {
                     clients: HashMap::new(),
-                    value: String::new()
+                    value: String::new(),
                 };
 
                 new_session.clients.insert(client.token(), client);
                 sessions.insert(session_name.clone(), new_session);
             } else {
-
-                let value = (&sessions.get(&session_name).unwrap().value).to_string();
-
-                let command_text: String = serde_json::to_string(&ClipboardCommand::Set {
-                    session: session_name.clone(),
-                    value
-                }).unwrap();
-                client.send(Message::from(command_text.clone())).ok();
-
                 let session = sessions.get_mut(&session_name).unwrap();
                 session.clients.insert(client.token(), client);
             }
@@ -58,8 +42,8 @@ fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Sess
                     session.value = value.clone();
                     send_to_session(session, &ClipboardCommand::Set {
                         value,
-                        session: session_name
-                    });
+                        session: session_name,
+                    }, client.token());
                 }
                 None => println!("session {} not found", session_name)
             }
@@ -67,10 +51,12 @@ fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Sess
     }
 }
 
-fn send_to_session(session: &Session, command: &ClipboardCommand) {
+fn send_to_session(session: &Session, command: &ClipboardCommand, exclude: Token) {
     let command_text = serde_json::to_string(command).unwrap();
     for client in session.clients.values() {
-        client.send(Message::from(command_text.clone())).ok();
+        if client.token() != exclude {
+            client.send(Message::from(command_text.clone())).ok();
+        }
     }
 }
 
@@ -117,5 +103,11 @@ fn main() {
 
     let sessions: Rc<RefCell<HashMap<String, Session>>> = Rc::new(RefCell::new(HashMap::new()));
 
-    listen(listen_adress, |out| { Server { out, sessions: sessions.clone() } }).unwrap()
+    let result = listen(listen_adress, |out| { Server { out, sessions: sessions.clone() } });
+    match result {
+        Ok(_) => {}
+        Err(_) => {
+            println!("error while listening");
+        }
+    }
 }
