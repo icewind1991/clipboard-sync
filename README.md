@@ -1,5 +1,8 @@
 # clipboard-sync
 
+[![Build Status](https://travis-ci.org/icewind1991/clipboard-sync.svg?branch=master)](https://travis-ci.org/icewind1991/clipboard-sync)
+[![Build status](https://ci.appveyor.com/api/projects/status/svqv23e4milvtgih?svg=true)](https://ci.appveyor.com/project/icewind1991/clipboard-sync)
+
 Synchronize clipboard between computers
 
 ## Usage
@@ -13,6 +16,7 @@ Simply run the server executable to start the server, by default the server list
 this can be changed by setting the `PORT` environment variable.
 
 A pre-built docker image with the server is available as `clipboardsync/server`
+and a static binary is available in the [releases](https://github.com/icewind1991/clipboard-sync/releases) page.
 
 The server is currently only tested on linux, but should run on all platforms with
 proper rust support.
@@ -27,6 +31,7 @@ client ws://example.com my_session_key
 ```
 
 The client is currently tested on linux(X11) and windows, but should also work fine on OSX and BSD.
+Prebuild binaries for windows can be found on the [releases](https://github.com/icewind1991/clipboard-sync/releases) page.
 
 ## Building
 
