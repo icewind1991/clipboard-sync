@@ -18,7 +18,10 @@ mod common;
 fn handle_command(command: ClipboardCommand, ctx: &mut ClipboardContext) {
     match command {
         ClipboardCommand::Set { value, session: _ } => {
-            let _ = ctx.set_contents(value);
+            let old_clipboard = ctx.get_contents().unwrap_or_default();
+            if value != old_clipboard {
+                let _ = ctx.set_contents(value);
+            }
         }
         ClipboardCommand::Listen { session: _ } => {}
     }
@@ -40,10 +43,6 @@ fn main() {
     println!("connecting to {} on channel {}", url, session);
 
     connect(url, |out| {
-        send_to_server(&out, &ClipboardCommand::Listen {
-            session: session.clone()
-        });
-
         let (tx, rx) = mpsc::channel();
 
         clipboard_thread(session.clone(), rx);
@@ -67,7 +66,15 @@ fn clipboard_thread(session: String, rx: mpsc::Receiver<Sender>) -> JoinHandle<(
         let hunderd_millis = time::Duration::from_millis(100);
         let mut old_clipboard = ctx.get_contents().unwrap_or_default();
 
+        thread::sleep(hunderd_millis);
+
         let out = rx.recv().unwrap();
+
+        // we need to do the listen after returning the closure for the websocket
+        // thus we can't send this message in the factory
+        send_to_server(&out, &ClipboardCommand::Listen {
+            session: session.clone()
+        });
         loop {
             thread::sleep(hunderd_millis);
             let new_clipbaord = ctx.get_contents().unwrap_or_default();
