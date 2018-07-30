@@ -4,6 +4,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate ws;
+extern crate env_logger;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use common::ClipboardCommand;
@@ -25,6 +26,7 @@ fn handle_command(command: ClipboardCommand, ctx: &mut ClipboardContext) {
 
 
 fn main() {
+    env_logger::init();
     let args: Vec<_> = env::args().collect();
 
     if args.len() != 3 {
