@@ -1,7 +1,6 @@
 extern crate clipboard;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate ws;
 extern crate env_logger;
@@ -9,7 +8,6 @@ extern crate env_logger;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use common::ClipboardCommand;
 use std::{thread, thread::JoinHandle, time};
-use std::sync::mpsc;
 use ws::{connect, Message, Sender};
 use std::env;
 
@@ -23,7 +21,7 @@ fn handle_command(command: ClipboardCommand, ctx: &mut ClipboardContext) {
                 let _ = ctx.set_contents(value);
             }
         }
-        ClipboardCommand::Listen { session: _ } => {}
+        _ => {}
     }
 }
 
@@ -43,10 +41,7 @@ fn main() {
     println!("connecting to {} on channel {}", url, session);
 
     connect(url, |out| {
-        let (tx, rx) = mpsc::channel();
-
-        clipboard_thread(session.clone(), rx);
-        let _ = tx.send(out);
+        clipboard_thread(session.clone(), out);
 
         move |msg: Message| {
             let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
@@ -60,15 +55,13 @@ fn main() {
     }).unwrap();
 }
 
-fn clipboard_thread(session: String, rx: mpsc::Receiver<Sender>) -> JoinHandle<()> {
+fn clipboard_thread(session: String, out: Sender) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        let hunderd_millis = time::Duration::from_millis(100);
+        let hundred_millis = time::Duration::from_millis(100);
         let mut old_clipboard = ctx.get_contents().unwrap_or_default();
 
-        thread::sleep(hunderd_millis);
-
-        let out = rx.recv().unwrap();
+        thread::sleep(hundred_millis);
 
         // we need to do the listen after returning the closure for the websocket
         // thus we can't send this message in the factory
@@ -76,10 +69,10 @@ fn clipboard_thread(session: String, rx: mpsc::Receiver<Sender>) -> JoinHandle<(
             session: session.clone()
         });
         loop {
-            thread::sleep(hunderd_millis);
-            let new_clipbaord = ctx.get_contents().unwrap_or_default();
-            if new_clipbaord != old_clipboard {
-                old_clipboard = new_clipbaord;
+            thread::sleep(hundred_millis);
+            let new_clipboard = ctx.get_contents().unwrap_or_default();
+            if new_clipboard != old_clipboard {
+                old_clipboard = new_clipboard;
                 send_to_server(&out, &ClipboardCommand::Set {
                     session: session.clone(),
                     value: old_clipboard.clone(),
