@@ -1,7 +1,6 @@
 extern crate mio;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate ws;
 
@@ -15,31 +14,20 @@ use ws::{CloseCode, Error, Handler, listen, Message, Result, Sender};
 mod common;
 
 struct Session {
-    clients: HashMap<Token, Sender>,
-    value: String,
+    clients: HashMap<Token, Sender>
 }
 
 fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Session>, client: Sender) {
     match command {
         ClipboardCommand::Listen { session: session_name } => {
-            if !sessions.contains_key(&session_name) {
-                let mut new_session = Session {
-                    clients: HashMap::new(),
-                    value: String::new(),
-                };
-
-                new_session.clients.insert(client.token(), client);
-                sessions.insert(session_name.clone(), new_session);
-            } else {
-                let session = sessions.get_mut(&session_name).unwrap();
-                session.clients.insert(client.token(), client);
-            }
+            sessions.entry(session_name).or_insert_with(|| Session {
+                clients: HashMap::new()
+            }).clients.insert(client.token(), client);
         }
 
         ClipboardCommand::Set { value, session: session_name } => {
             match sessions.get_mut(&session_name) {
                 Some(mut session) => {
-                    session.value = value.clone();
                     send_to_session(session, &ClipboardCommand::Set {
                         value,
                         session: session_name,
@@ -97,13 +85,13 @@ impl Handler for Server {
 
 fn main() {
     let port = std::env::var("PORT").unwrap_or("80".to_string());
-    let listen_adress = format!("0.0.0.0:{}", port);
+    let listen_address = format!("0.0.0.0:{}", port);
 
-    println!("listening on: {:?}", listen_adress);
+    println!("listening on: {:?}", listen_address);
 
     let sessions: Rc<RefCell<HashMap<String, Session>>> = Rc::new(RefCell::new(HashMap::new()));
 
-    let result = listen(listen_adress, |out| { Server { out, sessions: sessions.clone() } });
+    let result = listen(listen_address, |out| { Server { out, sessions: sessions.clone() } });
     match result {
         Ok(_) => {}
         Err(_) => {
