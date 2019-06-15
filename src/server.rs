@@ -1,10 +1,4 @@
-extern crate mio;
-extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
-extern crate ws;
-
-use common::ClipboardCommand;
+use crate::common::ClipboardCommand;
 use mio::Token;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -27,7 +21,7 @@ fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Sess
 
         ClipboardCommand::Set { value, session: session_name } => {
             match sessions.get_mut(&session_name) {
-                Some(mut session) => {
+                Some(session) => {
                     send_to_session(session, &ClipboardCommand::Set {
                         value,
                         session: session_name,

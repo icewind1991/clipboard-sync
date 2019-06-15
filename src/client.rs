@@ -1,13 +1,5 @@
-extern crate clipboard;
-extern crate env_logger;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate ws;
-
 use clipboard::{ClipboardContext, ClipboardProvider};
-use common::ClipboardCommand;
+use crate::common::ClipboardCommand;
 use std::{thread, thread::JoinHandle, time};
 use std::env;
 use std::sync::{Arc, Mutex};
