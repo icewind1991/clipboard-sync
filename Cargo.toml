@@ -19,3 +19,4 @@ serde_json = "1.0"
 clipboard = "0.5"
 env_logger = "0.6"
 ws = {version = "0.8", features = ["native-tls"]}
+err-derive = "0.1"

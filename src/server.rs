@@ -2,34 +2,47 @@ use crate::common::ClipboardCommand;
 use mio::Token;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::rc::Rc;
-use ws::{CloseCode, Error, Handler, listen, Message, Result, Sender};
+use ws::{listen, CloseCode, Error, Handler, Message, Result, Sender};
 
 mod common;
 
+#[derive(Default)]
 struct Session {
-    clients: HashMap<Token, Sender>
+    clients: HashMap<Token, Sender>,
 }
 
-fn handle_command(command: ClipboardCommand, sessions: &mut HashMap<String, Session>, client: Sender) {
-    match command {
-        ClipboardCommand::Listen { session: session_name } => {
-            sessions.entry(session_name).or_insert_with(|| Session {
-                clients: HashMap::new()
-            }).clients.insert(client.token(), client);
+impl Session {
+    pub fn join(&mut self, client: Sender) {
+        self.clients.insert(client.token(), client);
+    }
+}
+
+fn handle_command(
+    command: ClipboardCommand,
+    sessions: &mut HashMap<String, Session>,
+    client: &Sender,
+) {
+    match &command {
+        ClipboardCommand::Listen {
+            session: session_name,
+        } => {
+            sessions
+                .entry(session_name.clone())
+                .or_default()
+                .join(client.clone());
         }
 
-        ClipboardCommand::Set { value, session: session_name } => {
-            match sessions.get_mut(&session_name) {
-                Some(session) => {
-                    send_to_session(session, &ClipboardCommand::Set {
-                        value,
-                        session: session_name,
-                    }, client.token());
-                }
-                None => println!("session {} not found", session_name)
+        ClipboardCommand::Set {
+            value: _,
+            session: session_name,
+        } => match sessions.get_mut(session_name) {
+            Some(session) => {
+                send_to_session(session, &command, client.token());
             }
-        }
+            None => println!("session {} not found", session_name),
+        },
     }
 }
 
@@ -37,11 +50,10 @@ fn send_to_session(session: &Session, command: &ClipboardCommand, exclude: Token
     let command_text = serde_json::to_string(command).unwrap();
     for client in session.clients.values() {
         if client.token() != exclude {
-            client.send(Message::from(command_text.clone())).ok();
+            let _ = client.send(command_text.as_str());
         }
     }
 }
-
 
 struct Server {
     out: Sender,
@@ -50,17 +62,15 @@ struct Server {
 
 impl Handler for Server {
     fn on_message(&mut self, msg: Message) -> Result<()> {
-        let result: serde_json::Result<ClipboardCommand> = serde_json::from_str(msg.as_text().unwrap_or_default());
-        match result {
+        match ClipboardCommand::try_from(msg) {
             Ok(command) => {
-                handle_command(command, &mut self.sessions.borrow_mut(), self.out.clone());
-                Ok(())
+                handle_command(command, &mut self.sessions.borrow_mut(), &self.out);
             }
-            Err(_) => {
-                println!("invalid message: {}", msg.as_text().unwrap_or_default());
-                Ok(())
+            Err(err) => {
+                println!("{}", err);
             }
-        }
+        };
+        Ok(())
     }
 
     fn on_close(&mut self, _: CloseCode, _: &str) {
@@ -85,7 +95,10 @@ fn main() {
 
     let sessions: Rc<RefCell<HashMap<String, Session>>> = Rc::new(RefCell::new(HashMap::new()));
 
-    let result = listen(listen_address, |out| { Server { out, sessions: sessions.clone() } });
+    let result = listen(listen_address, |out| Server {
+        out,
+        sessions: sessions.clone(),
+    });
     match result {
         Ok(_) => {}
         Err(_) => {
