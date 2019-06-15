@@ -5,6 +5,7 @@ use std::convert::TryFrom;
 use ws::{Error as WsError, ErrorKind, Message};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
 pub enum ClipboardCommand {
     Listen { session: String },

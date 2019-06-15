@@ -1,5 +1,6 @@
 use crate::common::ClipboardCommand;
 use clipboard::{ClipboardContext, ClipboardProvider};
+use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::env;
 use std::sync::{Arc, Mutex};
@@ -14,7 +15,7 @@ fn handle_command(
     ctx: &mut ClipboardContext,
     current_clipboard: Arc<Mutex<String>>,
 ) {
-    if let ClipboardCommand::Set { value, session: _ } = command {
+    if let ClipboardCommand::Set { value, .. } = command {
         let mut clip = current_clipboard.lock().unwrap();
         if *clip != value {
             let _ = ctx.set_contents(value.clone());
@@ -41,10 +42,11 @@ fn main() {
         let current_clipboard = Arc::new(Mutex::new(String::new()));
         clipboard_thread(session.clone(), out, current_clipboard.clone());
 
+        let ctx: RefCell<ClipboardContext> = RefCell::new(ClipboardProvider::new().unwrap());
+
         move |msg: Message| {
-            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
             if let Ok(command) = ClipboardCommand::try_from(msg) {
-                handle_command(command, &mut ctx, current_clipboard.clone());
+                handle_command(command, &mut ctx.borrow_mut(), current_clipboard.clone());
             }
             Ok(())
         }
