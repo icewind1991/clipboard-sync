@@ -7,7 +7,7 @@ install:
 - docker pull ekidd/rust-musl-builder:latest
 script:
 - cargo build
-- "./build_static.sh server"
+- "./build_static.sh"
 env:
   global:
   - COMMIT=${TRAVIS_COMMIT::8}
