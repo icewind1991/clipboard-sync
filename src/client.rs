@@ -17,7 +17,7 @@ fn handle_command(
 ) {
     if let ClipboardCommand::Set { value, .. } = command {
         let mut clip = current_clipboard.lock().unwrap();
-        if *clip != value {
+        if *clip != value && value != "" {
             let _ = ctx.set_contents(value.clone());
             *clip = value;
         }
@@ -83,7 +83,7 @@ fn clipboard_thread(
             thread::sleep(HUNDRED_MS);
             let new_clipboard = ctx.get_contents().unwrap_or_default();
             let mut clip = current_clipboard.lock().unwrap();
-            if *clip != new_clipboard {
+            if *clip != new_clipboard && new_clipboard != "" {
                 send_to_server(
                     &out,
                     &ClipboardCommand::Set {
