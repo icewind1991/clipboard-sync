@@ -1,5 +1,6 @@
+use crate::clip::ClipboardHandler;
 use crate::common::ClipboardCommand;
-use clipboard::{ClipboardContext, ClipboardProvider};
+use clipboard::ClipboardProvider;
 use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::env;
@@ -8,11 +9,12 @@ use std::time::Duration;
 use std::{thread, thread::JoinHandle};
 use ws::{connect, Message, Sender};
 
+mod clip;
 mod common;
 
 fn handle_command(
     command: ClipboardCommand,
-    ctx: &mut ClipboardContext,
+    ctx: &mut ClipboardHandler,
     current_clipboard: Arc<Mutex<String>>,
 ) {
     if let ClipboardCommand::Set { value, .. } = command {
@@ -42,7 +44,7 @@ fn main() {
         let current_clipboard = Arc::new(Mutex::new(String::new()));
         clipboard_thread(session.clone(), out, current_clipboard.clone());
 
-        let ctx: RefCell<ClipboardContext> = RefCell::new(ClipboardProvider::new().unwrap());
+        let ctx: RefCell<ClipboardHandler> = RefCell::new(ClipboardHandler::new().unwrap());
 
         move |msg: Message| {
             if let Ok(command) = ClipboardCommand::try_from(msg) {
@@ -62,7 +64,7 @@ fn clipboard_thread(
     current_clipboard: Arc<Mutex<String>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        let mut ctx: ClipboardHandler = ClipboardHandler::new().unwrap();
 
         {
             let mut clip = current_clipboard.lock().unwrap();
@@ -84,6 +86,7 @@ fn clipboard_thread(
             let new_clipboard = ctx.get_contents().unwrap_or_default();
             let mut clip = current_clipboard.lock().unwrap();
             if *clip != new_clipboard {
+                println!("{}", new_clipboard);
                 send_to_server(
                     &out,
                     &ClipboardCommand::Set {
