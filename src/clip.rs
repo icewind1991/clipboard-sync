@@ -7,6 +7,7 @@ use std::io::Read;
 use wl_clipboard_rs::{
     copy::{self, copy, Options, Source},
     paste::{get_contents, ClipboardType, MimeType, Seat},
+    utils::{is_primary_selection_supported, PrimarySelectionCheckError},
 };
 
 pub enum ClipboardHandler {
@@ -17,7 +18,12 @@ pub enum ClipboardHandler {
 impl ClipboardHandler {
     #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
     fn is_wayland() -> bool {
-        get_contents(ClipboardType::Regular, Seat::Unspecified, MimeType::Text).is_ok()
+        match is_primary_selection_supported() {
+            Ok(_) => true,
+            Err(PrimarySelectionCheckError::NoSeats) => true,
+            Err(PrimarySelectionCheckError::MissingProtocol { .. }) => true,
+            Err(_) => false,
+        }
     }
 
     #[cfg(not(all(unix, not(any(target_os = "macos", target_os = "android")))))]

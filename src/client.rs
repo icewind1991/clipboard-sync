@@ -56,7 +56,7 @@ fn main() {
     .unwrap();
 }
 
-const HUNDRED_MS: Duration = Duration::from_millis(100);
+const HUNDRED_MS: Duration = Duration::from_millis(500);
 
 fn clipboard_thread(
     session: String,
@@ -65,11 +65,6 @@ fn clipboard_thread(
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut ctx: ClipboardHandler = ClipboardHandler::new().unwrap();
-
-        {
-            let mut clip = current_clipboard.lock().unwrap();
-            *clip = ctx.get_contents().unwrap_or_default();
-        }
 
         thread::sleep(HUNDRED_MS);
 
@@ -83,7 +78,13 @@ fn clipboard_thread(
         );
         loop {
             thread::sleep(HUNDRED_MS);
-            let new_clipboard = ctx.get_contents().unwrap_or_default();
+            let new_clipboard = match ctx.get_contents() {
+                Ok(content) => content,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    continue;
+                }
+            };
             let mut clip = current_clipboard.lock().unwrap();
             if *clip != new_clipboard && new_clipboard != "" {
                 send_to_server(
