@@ -17,7 +17,7 @@ pub enum ParseError {
     #[error(display = "Invalid message encoding")]
     Encoding,
     #[error(display = "Invalid formatted message: {}", _1)]
-    InvalidMessage(#[error(cause)] SerdeError, String),
+    InvalidMessage(#[error(source)] SerdeError, String),
     #[error(display = "Unknown error")]
     Unknown,
 }
