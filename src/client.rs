@@ -86,7 +86,6 @@ fn clipboard_thread(
             let new_clipboard = ctx.get_contents().unwrap_or_default();
             let mut clip = current_clipboard.lock().unwrap();
             if *clip != new_clipboard {
-                println!("{}", new_clipboard);
                 send_to_server(
                     &out,
                     &ClipboardCommand::Set {
