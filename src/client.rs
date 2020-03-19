@@ -7,7 +7,7 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{thread, thread::JoinHandle};
-use ws::{connect, Message, Sender};
+use ws::{connect, CloseCode, Message, Sender};
 
 mod clip;
 mod common;
@@ -56,7 +56,7 @@ fn main() {
     .unwrap();
 }
 
-const HUNDRED_MS: Duration = Duration::from_millis(500);
+const SLEEP: Duration = Duration::from_millis(500);
 
 fn clipboard_thread(
     session: String,
@@ -66,7 +66,7 @@ fn clipboard_thread(
     thread::spawn(move || {
         let mut ctx: ClipboardHandler = ClipboardHandler::new().unwrap();
 
-        thread::sleep(HUNDRED_MS);
+        thread::sleep(SLEEP);
 
         // we need to do the listen after returning the closure for the websocket
         // thus we can't send this message in the factory
@@ -77,12 +77,13 @@ fn clipboard_thread(
             },
         );
         loop {
-            thread::sleep(HUNDRED_MS);
+            thread::sleep(SLEEP);
             let new_clipboard = match ctx.get_contents() {
                 Ok(content) => content,
                 Err(e) => {
                     eprintln!("{}", e);
-                    continue;
+                    let _ = out.close(CloseCode::Normal);
+                    break;
                 }
             };
             let mut clip = current_clipboard.lock().unwrap();
